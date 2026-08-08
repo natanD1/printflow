@@ -1,19 +1,20 @@
 "use client";
 
 import {
-  Boxes,
+  Box,
   Home,
   LogOut,
   Monitor,
   Moon,
   Settings,
   Sun,
+  Ticket,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,17 +33,29 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { Separator } from "./ui/separator";
 
-const navItems = [
+const baseNavItems = [
   { icon: Home, title: "Home", url: "/home" },
-  { icon: Boxes, title: "Filamentos", url: "/filamentos" },
+  { icon: Box, title: "Estoque", url: "/estoque" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { setTheme } = useTheme();
+
+  const navItems = useMemo(
+    () =>
+      user?.isAdmin
+        ? [
+            ...baseNavItems,
+            { icon: Ticket, title: "Convites", url: "/convites" },
+          ]
+        : baseNavItems,
+    [user?.isAdmin]
+  );
 
   const handleLogout = useCallback(() => {
     logout()
@@ -125,6 +138,7 @@ export function AppSidebar() {
               <span>Configurações</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <Separator className="my-3" />
           <SidebarMenuItem>
             <SidebarMenuButton
               className="cursor-pointer transition-colors hover:bg-rose-500 hover:text-white"
