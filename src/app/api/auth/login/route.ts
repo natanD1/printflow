@@ -4,6 +4,8 @@ import { setAuthCookie } from "@/lib/auth-cookie";
 import { loginSchema } from "@/schemas/login-schema";
 import type { AuthSession, AuthUser } from "@/types/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request): Promise<NextResponse> {
   const body = await request.json();
   const parsedBody = loginSchema.safeParse(body);

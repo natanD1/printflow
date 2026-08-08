@@ -5,6 +5,8 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 import { filamentSchema } from "@/schemas/filament-schema";
 import type { Filament } from "@/types/filament";
 
+export const dynamic = "force-dynamic";
+
 interface RouteContext {
   params: Promise<{ id: string }>;
 }

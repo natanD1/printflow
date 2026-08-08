@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/api-client";
 import { AUTH_COOKIE_NAME, clearAuthCookie } from "@/lib/auth-cookie";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(): Promise<NextResponse> {
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 

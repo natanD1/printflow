@@ -4,6 +4,8 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 import type { AuthUser } from "@/types/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(): Promise<NextResponse> {
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 

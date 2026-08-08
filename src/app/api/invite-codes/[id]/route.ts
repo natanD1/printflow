@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 
+export const dynamic = "force-dynamic";
+
 interface RouteContext {
   params: Promise<{ id: string }>;
 }

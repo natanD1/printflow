@@ -5,6 +5,8 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 import { inviteCodeSchema } from "@/schemas/invite-code-schema";
 import type { InviteCode } from "@/types/invite-code";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(): Promise<NextResponse> {
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 

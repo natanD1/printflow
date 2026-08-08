@@ -5,6 +5,8 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
 import { settingsSchema } from "@/schemas/settings-schema";
 import type { Settings } from "@/types/settings";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(): Promise<NextResponse> {
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
 
