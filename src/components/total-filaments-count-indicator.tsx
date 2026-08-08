@@ -1,4 +1,4 @@
-import { Clock } from "lucide-react";
+import { Layers } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -6,22 +6,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDuration } from "@/utils/format-duration";
 
-export function TotalHourPrintIndicator({ hours }: { hours: number }) {
+export function TotalFilamentsCountIndicator({ count }: { count: number }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="size-4 text-sky-500 dark:text-sky-400" />
-          Horas de impressão
+          <Layers className="size-4 text-sky-500 dark:text-sky-400" />
+          Filamentos cadastrados
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         <p className="font-heading font-semibold text-3xl text-sky-500 dark:text-sky-400">
-          {formatDuration(hours)}
+          {count.toLocaleString("pt-BR")}
         </p>
-        <CardDescription>Referente ao mês atual</CardDescription>
+        <CardDescription>Total no estoque</CardDescription>
       </CardContent>
     </Card>
   );

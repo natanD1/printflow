@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Manrope } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
 import "./globals.css";
 
@@ -27,9 +28,17 @@ export default function RootLayout({
     <html
       className={`${manrope.variable} ${geistMono.variable} h-full antialiased`}
       lang="pt-BR"
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          disableTransitionOnChange
+          enableSystem
+        >
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
