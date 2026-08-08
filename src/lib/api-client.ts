@@ -33,6 +33,7 @@ export async function apiFetch<T>(
   const response = await fetch(`${env.API_URL}${path}`, {
     ...init,
     body: requestBody,
+    cache: "no-store",
     headers: isFormData
       ? headers
       : {
