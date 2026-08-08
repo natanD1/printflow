@@ -1,18 +1,5 @@
-import { Agent, fetch as undiciFetch } from "undici";
 import { env } from "@/lib/env";
 import type { ApiErrorResponse } from "@/types/auth";
-
-/**
- * Sem keep-alive: o hostname `backend` (Docker DNS interno) pode trocar de IP
- * quando o container é recriado. Uma conexão HTTP mantida viva reaponta pra
- * um IP morto (ou reciclado por outro container) e passa a devolver respostas
- * erradas em vez de dar erro de conexão. Forçar conexão nova a cada request
- * garante um lookup de DNS fresco toda vez.
- */
-const internalApiDispatcher = new Agent({
-  keepAliveMaxTimeout: 1,
-  keepAliveTimeout: 1,
-});
 
 export class ApiError extends Error {
   readonly status: number;
@@ -34,7 +21,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const isFormData = body instanceof FormData;
 
-  let requestBody: string | FormData | undefined;
+  let requestBody: BodyInit | undefined;
   if (body === undefined) {
     requestBody = undefined;
   } else if (isFormData) {
@@ -43,20 +30,17 @@ export async function apiFetch<T>(
     requestBody = JSON.stringify(body);
   }
 
-  const response = await undiciFetch(`${env.API_URL}${path}`, {
+  const response = await fetch(`${env.API_URL}${path}`, {
     ...init,
     body: requestBody,
     cache: "no-store",
-    dispatcher: internalApiDispatcher,
     headers: isFormData
       ? headers
       : {
           "Content-Type": "application/json",
           ...headers,
         },
-    // undici tem sua própria declaração de FormData/BodyInit, incompatível
-    // por tipagem (mas idêntica em runtime) com a global do lib.dom.
-  } as Parameters<typeof undiciFetch>[1]);
+  });
 
   if (!response.ok) {
     const errorBody = (await response
