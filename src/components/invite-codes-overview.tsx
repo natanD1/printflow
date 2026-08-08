@@ -90,14 +90,14 @@ export function InviteCodesOverview() {
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <Button onClick={fetchInviteCodes} variant="outline">
+        <Button size="lg" onClick={fetchInviteCodes} variant="outline">
           <RefreshCw />
           Atualizar
         </Button>
         <InviteCodeFormDialog
           onSubmit={createInviteCode}
           trigger={
-            <Button>
+            <Button size="lg">
               <Plus />
               Gerar convite
             </Button>

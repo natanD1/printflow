@@ -8,11 +8,11 @@ export default function AuthPage() {
       <AuthCard />
       <Link
         aria-label="Apoie o PrintFlow"
-        className="absolute right-4 bottom-4 flex size-10 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-rose-500"
+        className="absolute right-4 bottom-4 flex size-10 cursor-pointer flex-col items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-rose-500"
         href="/doar"
         title="Apoie o PrintFlow"
       >
-        <Heart className="size-5" />
+        <Heart className="size-5 animate-pulse" />
       </Link>
     </main>
   );

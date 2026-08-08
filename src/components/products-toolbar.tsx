@@ -40,7 +40,7 @@ export function ProductsToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button size="lg" variant="outline">
+        <Button className="cursor-not-allowed" size="lg" disabled variant="outline">
           <Calendar />
           Período
         </Button>

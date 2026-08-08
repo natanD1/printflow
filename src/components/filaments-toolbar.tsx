@@ -40,14 +40,14 @@ export function FilamentsToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button onClick={onRefresh} variant="outline">
+        <Button onClick={onRefresh} size="lg" variant="outline">
           <RefreshCw />
           Atualizar
         </Button>
         <FilamentFormDialog
           onSubmit={onCreate}
           trigger={
-            <Button>
+            <Button size="lg">
               <Plus />
               Adicionar filamento
             </Button>
