@@ -13,8 +13,9 @@
 - `src/app` — rotas (App Router). Cada tela fica em sua própria pasta de rota:
   - `src/app/auth` — tela de login/cadastro (pública).
   - `src/app/(app)/home` — tela inicial (protegida, exige login): `HomeOverview` orquestra tudo — busca produtos uma vez (`useProducts`), calcula os 3 indicadores (`BillingIndicator`/`TotalHourPrintIndicator` filtrados por **mês atual**, `TotalProductsCount` filtrado por **dia atual** — todos a partir de `product.createdAt`) e repassa os dados/handlers pra `ProductsTable` (que não busca nada sozinha, só recebe props — evita fetch duplicado). CRUD completo de produto: `ProductFormDialog` (criar/editar, com upload de foto e `ProductFilamentPicker`), `ProductDetailDialog` (visualizar, só leitura, mostra breakdown de custo/preço sugerido/preço final), exclusão via `AlertDialog` — tudo isso dentro de `ProductRowActions` (dropdown de ações da tabela).
-  - `src/app/(app)/filamentos` — estoque de filamentos (protegida): mesmo padrão, `FilamentsOverview` + 3 indicadores + grid de cards, CRUD completo via `FilamentFormDialog` e exclusão com `AlertDialog`.
+  - `src/app/(app)/estoque` — estoque de filamentos (protegida; pasta chama `estoque`, mas componentes/hook internos continuam `filaments-*`/`useFilaments`): mesmo padrão, `FilamentsOverview` + 3 indicadores + grid de cards, CRUD completo via `FilamentFormDialog` e exclusão com `AlertDialog`.
   - `src/app/(app)/configuracoes` — perfil + parametrização de custo (protegida): `SettingsOverview` renderiza `ProfileCard` (nome/e-mail do usuário logado via `useAuth()`, botão "Trocar senha" desabilitado — funcionalidade futura) e `SettingsForm` (preço do kWh, potência média, margem de lucro padrão — usados no cálculo automático de preço dos produtos, ver seção própria abaixo).
+  - `src/app/(app)/convites` — gestão de códigos de convite (protegida, **admin-only**): `InviteCodesOverview` + 3 indicadores (gerados/disponíveis/usados) + `DataTable` com status (`Available`/`Used`/`Revoked`/`Expired`, badge colorido), quem usou (nome/e-mail), geração via `InviteCodeFormDialog` (só pede nome do titular — código e prazo de expiração são gerados pelo backend) e revogação via `InviteCodeRowActions` (só aparece pra convites `Available`, com `AlertDialog` de confirmação). Ver seção **Admin-only** abaixo pra regra de acesso.
   - `src/app/page.tsx` — raiz `/`, apenas redireciona para `/auth`.
   - `src/app/api` — endpoints de API (route handlers). Obrigatoriamente dentro de `app/`, é exigência do Next.js — não pode ficar fora dele.
 - `src/components` — componentes React sem subpastas por escopo (ex: `login-form.tsx`, `auth-card.tsx` direto em `src/components`). `src/components/ui` é exceção, reservada aos componentes do shadcn/ui.
@@ -30,6 +31,24 @@
 - Rotas autenticadas ficam listadas em `protectedRoutes` dentro de `src/proxy.ts`.
 - A verificação é feita pela presença do cookie httpOnly definido em `src/lib/auth-cookie.ts` (`AUTH_COOKIE_NAME`), setado pelas rotas de `src/app/api/auth/login` e `.../register`.
 - Novas telas que exigem login: criar a rota em `src/app/<rota>` e adicionar `/<rota>` em `protectedRoutes` no `src/proxy.ts`.
+
+### Admin-only (`isAdmin`)
+
+`AuthUser.isAdmin` (`src/types/auth.ts`) vem do backend (`UserDto.IsAdmin`, propagado pro token JWT como claim de role `Admin`). Não existe checagem de role no `src/proxy.ts` (ele só decide autenticado vs não-autenticado, sem decodificar o JWT no Edge) — a proteção de verdade é **sempre no backend**, via `[Authorize(Roles = "Admin")]` no controller correspondente. No front, a regra é só UX: esconder o que não é pra aparecer.
+
+Padrão usado em `/convites` (`src/components/app-sidebar.tsx`): pegar `user` de `useAuth()` e incluir o item de menu condicionalmente:
+
+```ts
+const navItems = useMemo(
+  () =>
+    user?.isAdmin
+      ? [...baseNavItems, { icon: Ticket, title: "Convites", url: "/convites" }]
+      : baseNavItems,
+  [user?.isAdmin]
+);
+```
+
+Se um usuário não-admin acessar a rota direto pela URL, a tela renderiza normalmente mas a chamada à API volta 403 (backend rejeitando) — a UI mostra a mensagem de erro do hook, não precisa de tratamento especial.
 
 ## Dupla camada: client (browser) vs server (route.ts)
 
@@ -140,6 +159,8 @@ src/app/api/filaments/
 
 No Next 16, `params` da rota dinâmica é `Promise` — sempre `const { id } = await params;` (ver `src/app/api/filaments/[id]/route.ts`).
 
+Nem todo recurso tem CRUD completo — `src/app/api/invite-codes/` só tem `GET`/`POST` na raiz e `DELETE` em `[id]` (revogar; não existe `PUT`, convite não é editável). O hook correspondente (`useInviteCodes`) reflete isso: sem `updateInviteCode`.
+
 ### Exceção: endpoints `multipart/form-data` (upload de arquivo)
 
 `/products` recebe `IFormFile` (foto) no backend, então o corpo é `multipart/form-data`, não JSON. Duas diferenças em relação ao padrão acima (ver `src/app/api/products/`):
@@ -147,6 +168,31 @@ No Next 16, `params` da rota dinâmica é `Promise` — sempre `const { id } = a
 - **`route.ts` não usa `zodSchema.safeParse`** — o corpo é `FormData`, não dá pra validar como JSON antes de repassar. A validação de negócio já acontece no backend (`DomainException` → 400 com `message`, capturado do mesmo jeito pelo `ApiError`). `route.ts` só lê `await request.formData()` e repassa pro `apiFetch`.
 - **`apiFetch` (`src/lib/api-client.ts`) detecta `body instanceof FormData`** e não faz `JSON.stringify` nem força `Content-Type: application/json` — deixa o `fetch` setar `multipart/form-data; boundary=...` sozinho. Chamadas JSON existentes não mudam.
 - **`request.ts` do client monta o `FormData` manualmente** (`buildProductFormData` em `src/app/api/products/request.ts`), incluindo listas de objeto complexo em chaves indexadas (`Filaments[0].FilamentId`, `Filaments[0].GramsUsed`, ...) — é o único formato que o model binder do ASP.NET aceita em `[FromForm]` pra `List<T>` de objeto. Testado por curl: sem índice, o campo chega vazio no backend sem erro nenhum (não usar Swagger UI pra testar isso, ele não monta esse formato).
+
+## Cache client-side com SWR (stale-while-revalidate)
+
+Todo hook de leitura de lista (`useFilaments`, `useProducts`, `useInviteCodes`) usa **SWR** (`swr`, não `useEffect`+`useState` manual) — decisão pra parar de refazer fetch toda vez que o usuário troca de rota, já que o cache é compartilhado por key entre qualquer componente que chame o mesmo hook.
+
+- **Provider global**: `src/components/providers.tsx` (`"use client"`, consolida `ThemeProvider` + `SWRConfig` + `AuthProvider`, montado em `src/app/layout.tsx`). Config: `dedupingInterval: 5000` (evita refetch duplicado se o usuário voltar pra mesma rota em menos de 5s), `revalidateOnFocus`/`revalidateOnReconnect: true` (mantém dado atualizado sem ação do usuário).
+- **Key**: string fixa por recurso (`"filaments"`, `"products"`, `"invite-codes"`), definida como constante no topo do hook — os endpoints não têm parâmetro, então não precisa de key composta.
+- **Fetcher**: a própria função `request.ts` do endpoint (ex: `getFilamentsRequest`), passada direto pro `useSWR(key, fetcher)`.
+- **Mutations (create/update/delete)**: chamam a função de `request.ts` e depois `mutate` (retornado por `useSWR`, renomeado tipo `mutateFilaments` pra não colidir entre hooks) pra atualizar o cache **na hora**, sem esperar revalidação:
+  ```ts
+  const createFilament = useCallback(async (formData: FilamentSchema) => {
+    try {
+      const filament = await createFilamentRequest(formData);
+      await mutateFilaments((current) => [filament, ...(current ?? [])], {
+        revalidate: false,
+      });
+    } catch (caughtError) {
+      throw new Error(getErrorMessage(caughtError), { cause: caughtError });
+    }
+  }, [mutateFilaments]);
+  ```
+  `revalidate: false` porque a resposta do `POST`/`PUT` já é a entidade atualizada — não precisa refazer o `GET`. Exceção: revogação de convite (`useInviteCodes.revokeInviteCode`) usa `revalidate: true`, porque o `DELETE` não devolve a entidade atualizada, só sucesso — o front atualiza o campo que sabe (`status`) otimisticamente e deixa a revalidação trazer o resto (`revokedAt` etc.) do servidor.
+- **Erro**: todo erro (do fetch inicial ou das mutations) passa por `getErrorMessage` (helper duplicado em cada hook, não extraído — três linhas, não vale a abstração) que usa `axios.isAxiosError<ApiErrorResponse>` pra ler `error.response?.data.message`. Mutations relançam como `new Error(message, { cause: caughtError })`, não o erro do axios cru — os componentes chamadores só fazem `try/finally` (nunca inspecionam o tipo do erro), então isso é seguro.
+- **Refresh manual**: hooks expõem `fetchXxx: () => mutate()` (sem args = força revalidação), usado pelo botão "Atualizar" das telas.
+- Ao criar um hook de leitura novo, copiar `src/hooks/use-filaments.ts` como template — é o mais simples dos três.
 
 ## Cálculo automático de preço (produtos)
 
