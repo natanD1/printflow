@@ -12,7 +12,9 @@
 
 - `src/app` — rotas (App Router). Cada tela fica em sua própria pasta de rota:
   - `src/app/auth` — tela de login/cadastro (pública).
-  - `src/app/home` — tela inicial (protegida, exige login).
+  - `src/app/(app)/home` — tela inicial (protegida, exige login): `HomeOverview` orquestra tudo — busca produtos uma vez (`useProducts`), calcula os 3 indicadores (`BillingIndicator`/`TotalHourPrintIndicator` filtrados por **mês atual**, `TotalProductsCount` filtrado por **dia atual** — todos a partir de `product.createdAt`) e repassa os dados/handlers pra `ProductsTable` (que não busca nada sozinha, só recebe props — evita fetch duplicado). CRUD completo de produto: `ProductFormDialog` (criar/editar, com upload de foto e `ProductFilamentPicker`), `ProductDetailDialog` (visualizar, só leitura, mostra breakdown de custo/preço sugerido/preço final), exclusão via `AlertDialog` — tudo isso dentro de `ProductRowActions` (dropdown de ações da tabela).
+  - `src/app/(app)/filamentos` — estoque de filamentos (protegida): mesmo padrão, `FilamentsOverview` + 3 indicadores + grid de cards, CRUD completo via `FilamentFormDialog` e exclusão com `AlertDialog`.
+  - `src/app/(app)/configuracoes` — perfil + parametrização de custo (protegida): `SettingsOverview` renderiza `ProfileCard` (nome/e-mail do usuário logado via `useAuth()`, botão "Trocar senha" desabilitado — funcionalidade futura) e `SettingsForm` (preço do kWh, potência média, margem de lucro padrão — usados no cálculo automático de preço dos produtos, ver seção própria abaixo).
   - `src/app/page.tsx` — raiz `/`, apenas redireciona para `/auth`.
   - `src/app/api` — endpoints de API (route handlers). Obrigatoriamente dentro de `app/`, é exigência do Next.js — não pode ficar fora dele.
 - `src/components` — componentes React sem subpastas por escopo (ex: `login-form.tsx`, `auth-card.tsx` direto em `src/components`). `src/components/ui` é exceção, reservada aos componentes do shadcn/ui.
@@ -96,4 +98,74 @@ Regras:
 - Uma função por `request.ts`, nomeada `<acao>Request` (ex: `loginRequest`, `logoutRequest`), tipada com o schema de entrada (`src/schemas`) e o tipo de resposta (`src/types`). Usa `api.get/post/put/delete<TResponse>(...)` e retorna `response.data`.
 - `request.ts` só importa `api` de `@/lib/api` — não importar nada server-only (`src/lib/env.ts`, `src/lib/api-client.ts`, `src/lib/auth-cookie.ts`), isso é exclusivo do `route.ts`.
 - Erro é tratado com `axios.isAxiosError<ApiErrorResponse>(error)` (ver `src/context/auth-context.tsx`), lendo `error.response?.data.message` — não criar classe de erro própria.
-- Hooks e contexts (ex: `src/context/auth-context.tsx`) importam essas funções direto de `@/app/api/<dominio>/<endpoint>/request` e só chamam elas; a lógica de estado (loading/error/dados) fica no hook/context, nunca a montagem da chamada HTTP.
+- Hooks e contexts (ex: `src/context/auth-context.tsx`, `src/hooks/use-filaments.ts`) importam essas funções direto de `@/app/api/<dominio>/<endpoint>/request` e só chamam elas; a lógica de estado (loading/error/dados) fica no hook/context, nunca a montagem da chamada HTTP.
+
+### Endpoints autenticados (`route.ts` que chamam o backend real)
+
+Toda rota que exige login no backend segue o mesmo idioma pra repassar o token: lê o cookie httpOnly (`AUTH_COOKIE_NAME`, via `cookies()` de `next/headers`) e manda como `Authorization: Bearer ${token}` no `apiFetch`. Exemplo já aplicado em `src/app/api/auth/logout/route.ts` e replicado em `src/app/api/filaments/`:
+
+```ts
+// src/app/api/<dominio>/route.ts
+import { cookies } from "next/headers";
+import { apiFetch, ApiError } from "@/lib/api-client";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-cookie";
+
+export async function GET(): Promise<NextResponse> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+
+  try {
+    const data = await apiFetch<T>("/<dominio>", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return NextResponse.json(data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json({ message: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+}
+```
+
+CRUD completo (`GET`/`POST` na raiz + `GET`/`PUT`/`DELETE` em `[id]`) fica em duas pastas, exemplo em `src/app/api/filaments/`:
+
+```
+src/app/api/filaments/
+  route.ts        # GET (lista) e POST (criar)
+  request.ts       # getFilamentsRequest, createFilamentRequest
+  [id]/
+    route.ts       # PUT e DELETE
+    request.ts     # updateFilamentRequest, deleteFilamentRequest
+```
+
+No Next 16, `params` da rota dinâmica é `Promise` — sempre `const { id } = await params;` (ver `src/app/api/filaments/[id]/route.ts`).
+
+### Exceção: endpoints `multipart/form-data` (upload de arquivo)
+
+`/products` recebe `IFormFile` (foto) no backend, então o corpo é `multipart/form-data`, não JSON. Duas diferenças em relação ao padrão acima (ver `src/app/api/products/`):
+
+- **`route.ts` não usa `zodSchema.safeParse`** — o corpo é `FormData`, não dá pra validar como JSON antes de repassar. A validação de negócio já acontece no backend (`DomainException` → 400 com `message`, capturado do mesmo jeito pelo `ApiError`). `route.ts` só lê `await request.formData()` e repassa pro `apiFetch`.
+- **`apiFetch` (`src/lib/api-client.ts`) detecta `body instanceof FormData`** e não faz `JSON.stringify` nem força `Content-Type: application/json` — deixa o `fetch` setar `multipart/form-data; boundary=...` sozinho. Chamadas JSON existentes não mudam.
+- **`request.ts` do client monta o `FormData` manualmente** (`buildProductFormData` em `src/app/api/products/request.ts`), incluindo listas de objeto complexo em chaves indexadas (`Filaments[0].FilamentId`, `Filaments[0].GramsUsed`, ...) — é o único formato que o model binder do ASP.NET aceita em `[FromForm]` pra `List<T>` de objeto. Testado por curl: sem índice, o campo chega vazio no backend sem erro nenhum (não usar Swagger UI pra testar isso, ele não monta esse formato).
+
+## Cálculo automático de preço (produtos)
+
+`Product.costPrice`/`salePrice` **não são digitados** — o backend calcula sozinho a cada `POST`/`PUT /products`:
+
+```
+custo_filamento = Σ (gramsUsed / 1000 × filament.filamentPrice) de cada filamento vinculado
+custo_energia   = totalHours × (settings.averagePowerWatts / 1000) × settings.kwhPrice
+costPrice       = custo_filamento + custo_energia
+suggestedSalePrice = costPrice × (1 + settings.defaultProfitMarginPercentage / 100)
+salePrice       = salePriceOverride (se enviado) senão suggestedSalePrice
+```
+
+`settings` vem de `UserSettings` (backend, 1:1 por usuário, tela `/configuracoes`). O front nunca reproduz essa conta — só manda `totalHours`, os filamentos usados (`filamentId` + `gramsUsed`) e, opcionalmente, `salePriceOverride` (pra sobrescrever o preço sugerido, ex: arredondar/promoção). `ProductDto`/`Product` (`src/types/product.ts`) trazem os três: `costPrice` (fato, calculado), `salePrice` (valor final, usado de verdade) e `suggestedSalePrice` (o que a fórmula sugeriu — sempre recalculado com a margem *atual*, não fica "preso" no valor de quando o produto foi criado). `ProductDetailDialog` é o único lugar que mostra os três lado a lado.
+
+## Gotchas de formulário (react-hook-form + campos numéricos/nativos)
+
+Três bugs reais já caçados nessa base, pra não repetir:
+
+1. **Campo numérico opcional (`number | null`) com `setValueAs`**: pra um campo nunca tocado pelo usuário, `register(name, { setValueAs })` recebe o `defaultValue` bruto — que pode ser `null`, não `""`. `Number(null)` é `0` em JS, não `NaN`. Sempre tratar os dois: `setValueAs: (v) => (v === "" || v === null ? null : Number(v))` (ver `salePriceOverride` em `src/components/product-form.tsx`).
+2. **`<select>` nativo com opções carregadas assíncrono** (ex: lista de filamentos vinda de `useFilaments()`): se o `<select>` monta antes das `<option>`s existirem, o `register(...)` uncontrolled não consegue casar o `defaultValue` com nenhuma opção, e quando elas chegam o browser não corrige sozinho — fica preso no placeholder mesmo com o valor certo salvo no form. Fix: tornar o `<select>` controlado também (`{...register(name)} value={currentValue}`), ver `src/components/product-filament-picker.tsx`.
+3. **Datas do backend não são ISO** — vêm formatadas `dd/MM/yyyy HH:mm:ss` (`BrazilianDateTimeConverter` no backend). `new Date(dateString)` do JS assume formato americano (`MM/DD/YYYY`) pra strings não-ISO e falha silenciosamente (ou lê a data errada) pra qualquer dia > 12. Nunca usar `new Date(product.createdAt)` direto — sempre `parseBrazilianDate` (`src/utils/parse-brazilian-date.ts`), usado em `home-overview.tsx` pra filtrar produtos por mês/dia.

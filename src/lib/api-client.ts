@@ -19,13 +19,26 @@ export async function apiFetch<T>(
   path: string,
   { body, headers, ...init }: ApiFetchOptions = {}
 ): Promise<T> {
+  const isFormData = body instanceof FormData;
+
+  let requestBody: BodyInit | undefined;
+  if (body === undefined) {
+    requestBody = undefined;
+  } else if (isFormData) {
+    requestBody = body;
+  } else {
+    requestBody = JSON.stringify(body);
+  }
+
   const response = await fetch(`${env.API_URL}${path}`, {
     ...init,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    body: requestBody,
+    headers: isFormData
+      ? headers
+      : {
+          "Content-Type": "application/json",
+          ...headers,
+        },
   });
 
   if (!response.ok) {

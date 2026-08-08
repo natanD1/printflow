@@ -1,9 +1,16 @@
 "use client";
 
 import axios from "axios";
-import { createContext, type ReactNode, useCallback, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { loginRequest } from "@/app/api/auth/login/request";
 import { logoutRequest } from "@/app/api/auth/logout/request";
+import { getCurrentUserRequest } from "@/app/api/auth/me/request";
 import { registerRequest } from "@/app/api/auth/register/request";
 import type { LoginSchema } from "@/schemas/login-schema";
 import type { RegisterSchema } from "@/schemas/register-schema";
@@ -73,6 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    getCurrentUserRequest()
+      .then(setUser)
+      .catch(() => null);
   }, []);
 
   return (
