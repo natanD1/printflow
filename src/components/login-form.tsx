@@ -39,7 +39,6 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
           autoComplete="email"
           id="email"
           type="email"
-          value={"admin@printflow.com"}
           {...register("email")}
         />
         <FieldError message={errors.email?.message} />
@@ -51,7 +50,6 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
           autoComplete="current-password"
           id="password"
           type="password"
-          value={"Admin@123"}
           {...register("password")}
         />
         <FieldError message={errors.password?.message} />
