@@ -22,12 +22,14 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  emptyMessage?: string;
   pageSize?: number;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  emptyMessage = "Nenhum produto encontrado.",
   pageSize = 10,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
@@ -86,7 +88,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                 >
                   <BrushCleaning className="mx-auto mb-2 size-8" />
-                  Nenhum produto encontrado.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

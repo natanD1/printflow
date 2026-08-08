@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Manrope } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/context/auth-context";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -31,14 +30,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider
+        <Providers
           attribute="class"
           defaultTheme="system"
           disableTransitionOnChange
           enableSystem
         >
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+          {children}
+        </Providers>
       </body>
     </html>
   );

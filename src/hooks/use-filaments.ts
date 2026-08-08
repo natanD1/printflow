@@ -1,7 +1,8 @@
 "use client";
 
 import axios from "axios";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import useSWR from "swr";
 import {
   deleteFilamentRequest,
   updateFilamentRequest,
@@ -14,6 +15,8 @@ import type { FilamentSchema } from "@/schemas/filament-schema";
 import type { ApiErrorResponse } from "@/types/auth";
 import type { Filament } from "@/types/filament";
 
+const FILAMENTS_KEY = "filaments";
+
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     return error.response?.data.message ?? "Erro inesperado";
@@ -23,71 +26,64 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function useFilaments() {
-  const [filaments, setFilaments] = useState<Filament[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: mutateFilaments,
+  } = useSWR<Filament[]>(FILAMENTS_KEY, getFilamentsRequest);
 
-  const fetchFilaments = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getFilamentsRequest();
-      setFilaments(result);
-    } catch (caughtError) {
-      setError(getErrorMessage(caughtError));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const createFilament = useCallback(async (data: FilamentSchema) => {
-    setError(null);
-    try {
-      const filament = await createFilamentRequest(data);
-      setFilaments((current) => [filament, ...current]);
-    } catch (caughtError) {
-      setError(getErrorMessage(caughtError));
-      throw caughtError;
-    }
-  }, []);
-
-  const updateFilament = useCallback(
-    async (id: string, data: FilamentSchema) => {
-      setError(null);
+  const createFilament = useCallback(
+    async (formData: FilamentSchema) => {
       try {
-        const filament = await updateFilamentRequest(id, data);
-        setFilaments((current) =>
-          current.map((item) => (item.id === id ? filament : item))
-        );
+        const filament = await createFilamentRequest(formData);
+        await mutateFilaments((current) => [filament, ...(current ?? [])], {
+          revalidate: false,
+        });
       } catch (caughtError) {
-        setError(getErrorMessage(caughtError));
-        throw caughtError;
+        throw new Error(getErrorMessage(caughtError), { cause: caughtError });
       }
     },
-    []
+    [mutateFilaments]
   );
 
-  const deleteFilament = useCallback(async (id: string) => {
-    setError(null);
-    try {
-      await deleteFilamentRequest(id);
-      setFilaments((current) => current.filter((item) => item.id !== id));
-    } catch (caughtError) {
-      setError(getErrorMessage(caughtError));
-      throw caughtError;
-    }
-  }, []);
+  const updateFilament = useCallback(
+    async (id: string, formData: FilamentSchema) => {
+      try {
+        const filament = await updateFilamentRequest(id, formData);
+        await mutateFilaments(
+          (current) =>
+            current?.map((item) => (item.id === id ? filament : item)),
+          { revalidate: false }
+        );
+      } catch (caughtError) {
+        throw new Error(getErrorMessage(caughtError), { cause: caughtError });
+      }
+    },
+    [mutateFilaments]
+  );
 
-  useEffect(() => {
-    fetchFilaments();
-  }, [fetchFilaments]);
+  const deleteFilament = useCallback(
+    async (id: string) => {
+      try {
+        await deleteFilamentRequest(id);
+        await mutateFilaments(
+          (current) => current?.filter((item) => item.id !== id),
+          { revalidate: false }
+        );
+      } catch (caughtError) {
+        throw new Error(getErrorMessage(caughtError), { cause: caughtError });
+      }
+    },
+    [mutateFilaments]
+  );
 
   return {
     createFilament,
     deleteFilament,
-    error,
-    fetchFilaments,
-    filaments,
+    error: error ? getErrorMessage(error) : null,
+    fetchFilaments: useCallback(() => mutateFilaments(), [mutateFilaments]),
+    filaments: data ?? [],
     isLoading,
     updateFilament,
   };
