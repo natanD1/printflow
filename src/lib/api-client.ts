@@ -1,4 +1,4 @@
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 import { env } from "@/lib/env";
 import type { ApiErrorResponse } from "@/types/auth";
 
@@ -34,7 +34,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const isFormData = body instanceof FormData;
 
-  let requestBody: BodyInit | undefined;
+  let requestBody: string | FormData | undefined;
   if (body === undefined) {
     requestBody = undefined;
   } else if (isFormData) {
@@ -43,7 +43,7 @@ export async function apiFetch<T>(
     requestBody = JSON.stringify(body);
   }
 
-  const requestInit: RequestInit & { dispatcher?: Agent } = {
+  const response = await undiciFetch(`${env.API_URL}${path}`, {
     ...init,
     body: requestBody,
     cache: "no-store",
@@ -54,9 +54,9 @@ export async function apiFetch<T>(
           "Content-Type": "application/json",
           ...headers,
         },
-  };
-
-  const response = await fetch(`${env.API_URL}${path}`, requestInit);
+    // undici tem sua própria declaração de FormData/BodyInit, incompatível
+    // por tipagem (mas idêntica em runtime) com a global do lib.dom.
+  } as Parameters<typeof undiciFetch>[1]);
 
   if (!response.ok) {
     const errorBody = (await response
