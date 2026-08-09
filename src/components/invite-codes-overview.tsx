@@ -90,7 +90,7 @@ export function InviteCodesOverview() {
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <Button size="lg" onClick={fetchInviteCodes} variant="outline">
+        <Button onClick={fetchInviteCodes} size="lg" variant="outline">
           <RefreshCw />
           Atualizar
         </Button>

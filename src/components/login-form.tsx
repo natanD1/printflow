@@ -7,6 +7,7 @@ import { FieldError } from "@/components/field-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/use-auth";
 import { type LoginSchema, loginSchema } from "@/schemas/login-schema";
 
@@ -58,6 +59,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
       <FieldError message={error ?? undefined} />
 
       <Button className="w-full" disabled={isLoading} type="submit">
+        {isLoading ? <Spinner /> : null}
         Entrar
       </Button>
 

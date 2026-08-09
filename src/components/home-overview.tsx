@@ -6,7 +6,7 @@ import { ProductsTable } from "@/components/products-table";
 import { TotalHourPrintIndicator } from "@/components/total-hour-print-indicator";
 import { TotalProductsCount } from "@/components/total-products-count";
 import { useProducts } from "@/hooks/use-products";
-import { isSameDay, isSameMonth } from "@/utils/date-filters";
+import { isSameMonth } from "@/utils/date-filters";
 
 export function HomeOverview() {
   const {
@@ -19,7 +19,7 @@ export function HomeOverview() {
     updateProduct,
   } = useProducts();
 
-  const { billingThisMonth, hoursThisMonth, productsToday } = useMemo(() => {
+  const { billingThisMonth, hoursThisMonth, productsMonthly } = useMemo(() => {
     const now = new Date();
 
     const productsThisMonth = products.filter((product) =>
@@ -35,9 +35,7 @@ export function HomeOverview() {
         (total, product) => total + product.totalHours,
         0
       ),
-      productsToday: products.filter((product) =>
-        isSameDay(product.createdAt, now)
-      ).length,
+      productsMonthly: productsThisMonth.length,
     };
   }, [products]);
 
@@ -46,8 +44,9 @@ export function HomeOverview() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <BillingIndicator value={billingThisMonth} />
         <TotalHourPrintIndicator hours={hoursThisMonth} />
-        <TotalProductsCount count={productsToday} />
+        <TotalProductsCount count={productsMonthly} />
       </div>
+
       <ProductsTable
         createProduct={createProduct}
         deleteProduct={deleteProduct}

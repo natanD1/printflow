@@ -44,7 +44,7 @@ export function FilamentsOverview() {
     return filaments.filter(
       (filament) =>
         filament.name.toLowerCase().includes(term) ||
-        filament.brand.toLowerCase().includes(term)
+        filament.brand.nameBrand.toLowerCase().includes(term)
     );
   }, [filaments, search]);
 
@@ -72,7 +72,6 @@ export function FilamentsOverview() {
         <TotalFilamentWeightIndicator kilograms={totalWeightKg} />
         <TotalFilamentUsedIndicator grams={usedThisMonthGrams} />
       </div>
-
       <FilamentsToolbar
         onCreate={createFilament}
         onRefresh={fetchFilaments}

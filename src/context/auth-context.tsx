@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -12,6 +13,8 @@ import { loginRequest } from "@/app/api/auth/login/request";
 import { logoutRequest } from "@/app/api/auth/logout/request";
 import { getCurrentUserRequest } from "@/app/api/auth/me/request";
 import { registerRequest } from "@/app/api/auth/register/request";
+import { ModalCommunication } from "@/components/modal-communication";
+import { setUnauthorizedHandler } from "@/lib/api";
 import type { LoginSchema } from "@/schemas/login-schema";
 import type { RegisterSchema } from "@/schemas/register-schema";
 import type { ApiErrorResponse, AuthUser } from "@/types/auth";
@@ -36,9 +39,11 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const login = useCallback(async (data: LoginSchema) => {
     setIsLoading(true);
@@ -88,6 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => null);
   }, []);
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => setIsSessionExpired(true));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  const handleSessionExpiredConfirm = useCallback(async () => {
+    setIsSessionExpired(false);
+    await logout().catch(() => null);
+    router.push("/auth");
+  }, [logout, router]);
+
   return (
     <AuthContext
       value={{
@@ -100,6 +116,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+
+      <ModalCommunication
+        confirmLabel="Ir para login"
+        description="Sua sessão expirou. Faça login novamente pra continuar."
+        hideCancel
+        onConfirm={handleSessionExpiredConfirm}
+        onOpenChange={setIsSessionExpired}
+        open={isSessionExpired}
+        title="Sessão expirada"
+        variant="warning"
+      />
     </AuthContext>
   );
 }

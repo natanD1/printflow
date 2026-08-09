@@ -5,6 +5,11 @@ import { type ChangeEvent, useCallback } from "react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ProductSchema } from "@/schemas/product-schema";
 
 interface ProductsToolbarProps {
@@ -40,10 +45,24 @@ export function ProductsToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button className="cursor-not-allowed" size="lg" disabled variant="outline">
-          <Calendar />
-          Período
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-disabled="true"
+                className="cursor-not-allowed opacity-50"
+                size="lg"
+                variant="outline"
+              >
+                <Calendar />
+                Período
+              </Button>
+            }
+          />
+          <TooltipContent>
+            <p>Teste</p>
+          </TooltipContent>
+        </Tooltip>
         <Button onClick={onRefresh} size="lg" variant="outline">
           <RefreshCw />
           Atualizar

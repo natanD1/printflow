@@ -2,18 +2,9 @@
 
 import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { ModalCommunication } from "@/components/modal-communication";
 import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { ProductFormDialog } from "@/components/product-form-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -39,6 +30,7 @@ export function ProductRowActions({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleUpdate = useCallback(
     (data: ProductSchema) => onUpdate(product.id, data),
@@ -62,10 +54,20 @@ export function ProductRowActions({
     try {
       await onDelete(product.id);
       setIsDeleteOpen(false);
+    } catch (caughtError) {
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Erro inesperado"
+      );
     } finally {
       setIsDeleting(false);
     }
   }, [product.id, onDelete]);
+
+  const handleErrorOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setErrorMessage(null);
+    }
+  }, []);
 
   return (
     <>
@@ -103,26 +105,24 @@ export function ProductRowActions({
         product={product}
       />
 
-      <AlertDialog onOpenChange={setIsDeleteOpen} open={isDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso vai remover “{product.productName}” permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              onClick={handleDelete}
-              variant="destructive"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ModalCommunication
+        confirmLabel="Excluir"
+        description={`Isso vai remover "${product.productName}" permanentemente.`}
+        isConfirming={isDeleting}
+        onConfirm={handleDelete}
+        onOpenChange={setIsDeleteOpen}
+        open={isDeleteOpen}
+        title="Excluir produto?"
+        variant="warning"
+      />
+
+      <ModalCommunication
+        description={errorMessage ?? undefined}
+        onOpenChange={handleErrorOpenChange}
+        open={errorMessage !== null}
+        title="Erro ao excluir produto"
+        variant="error"
+      />
     </>
   );
 }

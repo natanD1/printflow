@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SidebarInset,
@@ -18,6 +19,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </header>
         <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
+      <FeedbackWidget />
     </SidebarProvider>
   );
 }

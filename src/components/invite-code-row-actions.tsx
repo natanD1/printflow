@@ -2,16 +2,7 @@
 
 import { Ban, MoreHorizontal } from "lucide-react";
 import { useCallback, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ModalCommunication } from "@/components/modal-communication";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,6 +23,7 @@ export function InviteCodeRowActions({
 }: InviteCodeRowActionsProps) {
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const canRevoke = inviteCode.status === "Available";
 
   const handleOpenRevoke = useCallback(() => {
@@ -43,10 +35,20 @@ export function InviteCodeRowActions({
     try {
       await onRevoke(inviteCode.id);
       setIsRevokeOpen(false);
+    } catch (caughtError) {
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Erro inesperado"
+      );
     } finally {
       setIsRevoking(false);
     }
   }, [inviteCode.id, onRevoke]);
+
+  const handleErrorOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setErrorMessage(null);
+    }
+  }, []);
 
   if (!canRevoke) {
     return null;
@@ -67,27 +69,24 @@ export function InviteCodeRowActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog onOpenChange={setIsRevokeOpen} open={isRevokeOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Revogar convite?</AlertDialogTitle>
-            <AlertDialogDescription>
-              O código “{inviteCode.code}” deixará de poder ser usado pra
-              cadastro.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isRevoking}
-              onClick={handleRevoke}
-              variant="destructive"
-            >
-              Revogar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ModalCommunication
+        confirmLabel="Revogar"
+        description={`O código "${inviteCode.code}" deixará de poder ser usado pra cadastro.`}
+        isConfirming={isRevoking}
+        onConfirm={handleRevoke}
+        onOpenChange={setIsRevokeOpen}
+        open={isRevokeOpen}
+        title="Revogar convite?"
+        variant="warning"
+      />
+
+      <ModalCommunication
+        description={errorMessage ?? undefined}
+        onOpenChange={handleErrorOpenChange}
+        open={errorMessage !== null}
+        title="Erro ao revogar convite"
+        variant="error"
+      />
     </>
   );
 }

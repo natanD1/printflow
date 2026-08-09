@@ -3,16 +3,7 @@
 import { Trash2 } from "lucide-react";
 import { type MouseEvent, useCallback, useState } from "react";
 import { FilamentFormDialog } from "@/components/filament-form-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ModalCommunication } from "@/components/modal-communication";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { FilamentSchema } from "@/schemas/filament-schema";
@@ -31,6 +22,7 @@ export function FilamentCard({
 }: FilamentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleUpdate = useCallback(
     (data: FilamentSchema) => onUpdate(filament.id, data),
@@ -50,10 +42,20 @@ export function FilamentCard({
     try {
       await onDelete(filament.id);
       setIsDeleteOpen(false);
+    } catch (caughtError) {
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Erro inesperado"
+      );
     } finally {
       setIsDeleting(false);
     }
   }, [filament.id, onDelete]);
+
+  const handleErrorOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setErrorMessage(null);
+    }
+  }, []);
 
   return (
     <>
@@ -78,8 +80,8 @@ export function FilamentCard({
               />
               <div className="flex flex-col gap-0.5">
                 <p className="font-medium text-sm">{filament.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {filament.brand}
+                <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                  {filament.brand.nameBrand} · {filament.type.name}
                 </p>
                 <p className="text-xs">
                   {filament.weight.toLocaleString("pt-BR", {
@@ -94,26 +96,24 @@ export function FilamentCard({
         triggerIsNativeButton={false}
       />
 
-      <AlertDialog onOpenChange={setIsDeleteOpen} open={isDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir filamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso vai remover “{filament.name}” do estoque permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              onClick={handleDelete}
-              variant="destructive"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ModalCommunication
+        confirmLabel="Excluir"
+        description={`Isso vai remover "${filament.name}" do estoque permanentemente.`}
+        isConfirming={isDeleting}
+        onConfirm={handleDelete}
+        onOpenChange={setIsDeleteOpen}
+        open={isDeleteOpen}
+        title="Excluir filamento?"
+        variant="warning"
+      />
+
+      <ModalCommunication
+        description={errorMessage ?? undefined}
+        onOpenChange={handleErrorOpenChange}
+        open={errorMessage !== null}
+        title="Erro ao excluir filamento"
+        variant="error"
+      />
     </>
   );
 }

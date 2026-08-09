@@ -20,7 +20,7 @@ export function TotalProductsCount({ count }: { count: number }) {
         <p className="font-heading font-semibold text-3xl text-violet-500 dark:text-violet-400">
           {count.toLocaleString("pt-BR")}
         </p>
-        <CardDescription>Produzidos hoje</CardDescription>
+        <CardDescription>Referente ao mês atual</CardDescription>
       </CardContent>
     </Card>
   );

@@ -1,6 +1,17 @@
 "use client";
 
-import { Box, Heart, Home, LogOut, Settings, Ticket, Zap } from "lucide-react";
+import {
+  Box,
+  Heart,
+  Home,
+  Layers,
+  LogOut,
+  MessageSquare,
+  Palette,
+  Settings,
+  Ticket,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback } from "react";
@@ -24,7 +35,12 @@ const generalNavItems = [
   { icon: Box, title: "Estoque", url: "/estoque" },
 ];
 
-const adminNavItems = [{ icon: Ticket, title: "Convites", url: "/convites" }];
+const adminNavItems = [
+  { icon: Ticket, title: "Convites", url: "/convites" },
+  { icon: Palette, title: "Marcas de Filamento", url: "/marcas-filamento" },
+  { icon: Layers, title: "Tipos de Filamento", url: "/tipos-filamento" },
+  { icon: MessageSquare, title: "Feedbacks", url: "/feedbacks" },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -41,11 +57,19 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-3 overflow-hidden rounded-md p-2 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Zap className="size-5" />
+          <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent">
+            <Image
+              alt="PrintFlow"
+              className="size-full object-cover"
+              height={32}
+              priority
+              src="/mark-accent-512.png"
+              width={32}
+            />
           </div>
-          <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden">
-            PrintFlow
+          <span className="font-semibold text-md group-data-[collapsible=icon]:hidden">
+            Print
+            <span className="text-[#5980a6]">Flow</span>
           </span>
         </div>
       </SidebarHeader>
